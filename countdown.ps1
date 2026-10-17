@@ -125,7 +125,7 @@ function Show-SetupDialog {
     Hide-ConsoleWindow
     $dlg = New-Object System.Windows.Forms.Form
     $dlg.Text = '倒计时'
-    $dlg.Size = New-Object System.Drawing.Size(360, 396)
+    $dlg.Size = New-Object System.Drawing.Size(360, 424)
     $dlg.StartPosition = 'CenterScreen'
     $dlg.FormBorderStyle = 'FixedDialog'
     $dlg.MaximizeBox = $false
@@ -140,7 +140,7 @@ function Show-SetupDialog {
     $lblM.Text = '分钟'
     $lblM.Location = New-Object System.Drawing.Point(20, 28)
     $lblM.Size = New-Object System.Drawing.Size($labelW, 24)
-    $lblM.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
+    $lblM.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
     $numM = New-Object System.Windows.Forms.NumericUpDown
     $numM.Location = New-Object System.Drawing.Point($inputX, 24)
     $numM.Size = New-Object System.Drawing.Size($inputW, 28)
@@ -150,7 +150,7 @@ function Show-SetupDialog {
     $lblS.Text = '秒'
     $lblS.Location = New-Object System.Drawing.Point(20, 68)
     $lblS.Size = New-Object System.Drawing.Size($labelW, 24)
-    $lblS.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
+    $lblS.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
     $numS = New-Object System.Windows.Forms.NumericUpDown
     $numS.Location = New-Object System.Drawing.Point($inputX, 64)
     $numS.Size = New-Object System.Drawing.Size($inputW, 28)
@@ -160,7 +160,7 @@ function Show-SetupDialog {
     $lblW.Text = '最后提醒 (秒)'
     $lblW.Location = New-Object System.Drawing.Point(20, 108)
     $lblW.Size = New-Object System.Drawing.Size($labelW, 24)
-    $lblW.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
+    $lblW.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
     $numW = New-Object System.Windows.Forms.NumericUpDown
     $numW.Location = New-Object System.Drawing.Point($inputX, 104)
     $numW.Size = New-Object System.Drawing.Size($inputW, 28)
@@ -175,7 +175,7 @@ function Show-SetupDialog {
     $lblC.Text = '边框颜色'
     $lblC.Location = New-Object System.Drawing.Point(20, 168)
     $lblC.Size = New-Object System.Drawing.Size($labelW, 24)
-    $lblC.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
+    $lblC.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
     $panelC = New-Object System.Windows.Forms.Panel
     $panelC.Location = New-Object System.Drawing.Point($inputX, 164)
     $panelC.Size = New-Object System.Drawing.Size(28, 28)
@@ -203,7 +203,7 @@ function Show-SetupDialog {
     $lblShadowR.Text = '阴影范围'
     $lblShadowR.Location = New-Object System.Drawing.Point(20, 228)
     $lblShadowR.Size = New-Object System.Drawing.Size($labelW, 24)
-    $lblShadowR.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
+    $lblShadowR.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
     $numShadowR = New-Object System.Windows.Forms.NumericUpDown
     $numShadowR.Location = New-Object System.Drawing.Point($inputX, 224)
     $numShadowR.Size = New-Object System.Drawing.Size($inputW, 28)
@@ -236,6 +236,14 @@ function Show-SetupDialog {
     $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
     $dlg.CancelButton = $btnCancel
 
+    $lblFooter = New-Object System.Windows.Forms.Label
+    $lblFooter.Text = '绍兴第二医院超声科'
+    $lblFooter.AutoSize = $false
+    $lblFooter.Size = New-Object System.Drawing.Size(328, 24)
+    $lblFooter.Location = New-Object System.Drawing.Point(16, 368)
+    $lblFooter.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+    $lblFooter.ForeColor = [System.Drawing.Color]::DimGray
+
     $savedCfg = Get-CountdownSettings
     $numM.Value = [Math]::Min($numM.Maximum, [Math]::Max(0, $savedCfg.Minutes))
     $numS.Value = [Math]::Min($numS.Maximum, [Math]::Max(0, $savedCfg.Seconds))
@@ -247,7 +255,7 @@ function Show-SetupDialog {
     $dlg.Controls.AddRange(@(
             $lblM, $numM, $lblS, $numS, $lblW, $numW, $chkMute,
             $lblC, $panelC, $btnPickC, $chkShadow, $lblShadowR, $numShadowR, $tipShadowR,
-            $tipW, $btnOk, $btnCancel))
+            $tipW, $btnOk, $btnCancel, $lblFooter))
     if ($dlg.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
         exit 0
     }
