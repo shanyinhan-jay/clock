@@ -1,9 +1,10 @@
 ﻿{
-    "WarnSeconds":  5,
-    "BorderColorArgb":  -16777216,
-    "TimeShadowEnabled":  true,
-    "Minutes":  0,
     "SoundEnabled":  true,
-    "TimeShadowBlur":  1,
-    "Seconds":  10
+    "Seconds":  20,
+    "TimeShadowBlur":  0,
+    "BorderColorArgb":  -32513,
+    "Minutes":  20,
+    "ProgressBulgeEnabled":  true,
+    "TimeShadowEnabled":  false,
+    "WarnSeconds":  10
 }

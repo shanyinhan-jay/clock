@@ -56,6 +56,7 @@ function Get-CountdownSettings {
         TimeShadowBlur     = 10
         WarnSeconds        = 10
         SoundEnabled       = $true
+        ProgressBulgeEnabled = $true
     }
     $path = Get-CountdownSettingsPath
     if (-not (Test-Path -LiteralPath $path)) { return $settings }
@@ -74,6 +75,9 @@ function Get-CountdownSettings {
         }
         if ($null -ne $json.WarnSeconds) { $settings.WarnSeconds = [int]$json.WarnSeconds }
         if ($null -ne $json.SoundEnabled) { $settings.SoundEnabled = [bool]$json.SoundEnabled }
+        if ($null -ne $json.ProgressBulgeEnabled) {
+            $settings.ProgressBulgeEnabled = [bool]$json.ProgressBulgeEnabled
+        }
     } catch { }
     if ($settings.Seconds -lt 0) { $settings.Seconds = 0 }
     if ($settings.Seconds -gt 59) { $settings.Seconds = 59 }
@@ -93,17 +97,19 @@ function Save-CountdownSettings {
         [bool]$TimeShadowEnabled,
         [double]$TimeShadowBlur,
         [int]$WarnSeconds,
-        [bool]$SoundEnabled
+        [bool]$SoundEnabled,
+        [bool]$ProgressBulgeEnabled
     )
     $path = Get-CountdownSettingsPath
     $data = @{
-        Minutes            = $Minutes
-        Seconds            = $Seconds
-        BorderColorArgb    = $BorderColor.ToArgb()
-        TimeShadowEnabled  = $TimeShadowEnabled
-        TimeShadowBlur     = $TimeShadowBlur
-        WarnSeconds        = $WarnSeconds
-        SoundEnabled       = $SoundEnabled
+        Minutes              = $Minutes
+        Seconds              = $Seconds
+        BorderColorArgb      = $BorderColor.ToArgb()
+        TimeShadowEnabled    = $TimeShadowEnabled
+        TimeShadowBlur       = $TimeShadowBlur
+        WarnSeconds          = $WarnSeconds
+        SoundEnabled         = $SoundEnabled
+        ProgressBulgeEnabled = $ProgressBulgeEnabled
     }
     if (Test-Path -LiteralPath $path) {
         try {
@@ -111,7 +117,7 @@ function Save-CountdownSettings {
             foreach ($prop in $existing.PSObject.Properties) {
                 if ($prop.Name -notin @(
                         'Minutes', 'Seconds', 'BorderColorArgb', 'TimeShadowEnabled',
-                        'TimeShadowBlur', 'WarnSeconds', 'SoundEnabled')) {
+                        'TimeShadowBlur', 'WarnSeconds', 'SoundEnabled', 'ProgressBulgeEnabled')) {
                     $data[$prop.Name] = $prop.Value
                 }
             }
@@ -125,7 +131,7 @@ function Show-SetupDialog {
     Hide-ConsoleWindow
     $dlg = New-Object System.Windows.Forms.Form
     $dlg.Text = '倒计时'
-    $dlg.Size = New-Object System.Drawing.Size(360, 424)
+    $dlg.Size = New-Object System.Drawing.Size(360, 452)
     $dlg.StartPosition = 'CenterScreen'
     $dlg.FormBorderStyle = 'FixedDialog'
     $dlg.MaximizeBox = $false
@@ -211,36 +217,32 @@ function Show-SetupDialog {
     $numShadowR.Maximum = 80
     $numShadowR.Value = 10
     $tipShadowR = New-Object System.Windows.Forms.Label
-    $tipShadowR.Text = '数值越大，阴影扩散越广'
     $tipShadowR.Location = New-Object System.Drawing.Point($inputX, 252)
     $tipShadowR.Size = New-Object System.Drawing.Size($inputW, 20)
     $tipShadowR.ForeColor = [System.Drawing.Color]::Gray
 
+    $chkBulge = New-Object System.Windows.Forms.CheckBox
+    $chkBulge.Text = '显示总进度'
+    $chkBulge.Location = New-Object System.Drawing.Point($inputX, 276)
+    $chkBulge.Size = New-Object System.Drawing.Size($inputW, 24)
+
     $tipW = New-Object System.Windows.Forms.Label
-    $tipW.Text = '0 表示关闭；进入该秒数后圆环红色内光随秒搏动'
-    $tipW.Location = New-Object System.Drawing.Point($inputX, 274)
+    $tipW.Location = New-Object System.Drawing.Point($inputX, 302)
     $tipW.Size = New-Object System.Drawing.Size($inputW, 36)
     $tipW.ForeColor = [System.Drawing.Color]::Gray
 
     $btnOk = New-Object System.Windows.Forms.Button
     $btnOk.Text = '开始'
-    $btnOk.Location = New-Object System.Drawing.Point($inputX, 318)
+    $btnOk.Location = New-Object System.Drawing.Point(135, 346)
     $btnOk.Size = New-Object System.Drawing.Size(90, 32)
     $btnOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
     $dlg.AcceptButton = $btnOk
-
-    $btnCancel = New-Object System.Windows.Forms.Button
-    $btnCancel.Text = '取消'
-    $btnCancel.Location = New-Object System.Drawing.Point(242, 318)
-    $btnCancel.Size = New-Object System.Drawing.Size(90, 32)
-    $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-    $dlg.CancelButton = $btnCancel
 
     $lblFooter = New-Object System.Windows.Forms.Label
     $lblFooter.Text = '绍兴第二医院超声科'
     $lblFooter.AutoSize = $false
     $lblFooter.Size = New-Object System.Drawing.Size(328, 24)
-    $lblFooter.Location = New-Object System.Drawing.Point(16, 368)
+    $lblFooter.Location = New-Object System.Drawing.Point(16, 396)
     $lblFooter.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
     $lblFooter.ForeColor = [System.Drawing.Color]::DimGray
 
@@ -251,11 +253,12 @@ function Show-SetupDialog {
     $numShadowR.Value = [Math]::Min($numShadowR.Maximum, [Math]::Max($numShadowR.Minimum, [decimal]$savedCfg.TimeShadowBlur))
     $numW.Value = [Math]::Min($numW.Maximum, [Math]::Max(0, $savedCfg.WarnSeconds))
     $chkMute.Checked = -not [bool]$savedCfg.SoundEnabled
+    $chkBulge.Checked = [bool]$savedCfg.ProgressBulgeEnabled
 
     $dlg.Controls.AddRange(@(
             $lblM, $numM, $lblS, $numS, $lblW, $numW, $chkMute,
             $lblC, $panelC, $btnPickC, $chkShadow, $lblShadowR, $numShadowR, $tipShadowR,
-            $tipW, $btnOk, $btnCancel, $lblFooter))
+            $chkBulge, $tipW, $btnOk, $lblFooter))
     if ($dlg.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
         exit 0
     }
@@ -266,16 +269,19 @@ function Show-SetupDialog {
     $timeShadowBlur = [double]$numShadowR.Value
     $warnSeconds = [int]$numW.Value
     $soundEnabled = -not $chkMute.Checked
+    $progressBulgeEnabled = [bool]$chkBulge.Checked
     Save-CountdownSettings -Minutes $minutes -Seconds $seconds -BorderColor $borderColor `
         -TimeShadowEnabled $timeShadowEnabled -TimeShadowBlur $timeShadowBlur `
-        -WarnSeconds $warnSeconds -SoundEnabled $soundEnabled
+        -WarnSeconds $warnSeconds -SoundEnabled $soundEnabled `
+        -ProgressBulgeEnabled $progressBulgeEnabled
     return @{
-        TotalSeconds       = $minutes * 60 + $seconds
-        WarnSeconds        = $warnSeconds
-        SoundEnabled       = $soundEnabled
-        BorderColor        = $borderColor
-        TimeShadowEnabled  = $timeShadowEnabled
-        TimeShadowBlur     = $timeShadowBlur
+        TotalSeconds         = $minutes * 60 + $seconds
+        WarnSeconds          = $warnSeconds
+        SoundEnabled         = $soundEnabled
+        BorderColor          = $borderColor
+        TimeShadowEnabled    = $timeShadowEnabled
+        TimeShadowBlur       = $timeShadowBlur
+        ProgressBulgeEnabled = $progressBulgeEnabled
     }
 }
 
@@ -285,6 +291,7 @@ $script:soundEnabled = [bool]$savedCfg.SoundEnabled
 $script:borderColor = [System.Drawing.Color]::FromArgb([int]$savedCfg.BorderColorArgb)
 $script:timeShadowEnabled = [bool]$savedCfg.TimeShadowEnabled
 $script:timeShadowBlur = [double]$savedCfg.TimeShadowBlur
+$script:progressBulgeEnabled = [bool]$savedCfg.ProgressBulgeEnabled
 $script:returnToSetup = $false
 $useCommandLineDuration = ($Minutes * 60 + $Seconds) -gt 0
 $total = 0
@@ -302,6 +309,7 @@ while ($true) {
         $script:borderColor = $setup.BorderColor
         $script:timeShadowEnabled = $setup.TimeShadowEnabled
         $script:timeShadowBlur = $setup.TimeShadowBlur
+        $script:progressBulgeEnabled = $setup.ProgressBulgeEnabled
     }
     if ($total -le 0) {
         [System.Windows.Forms.MessageBox]::Show('时长必须大于 0 秒。', '倒计时', 'OK', 'Warning') | Out-Null
@@ -363,13 +371,21 @@ while ($true) {
         </Ellipse.Fill>
       </Ellipse>
       <Ellipse x:Name="Ring" Stroke="#D9FFFFFF" StrokeThickness="2" Fill="Transparent"/>
+      <Path x:Name="ProgressBulge" StrokeThickness="0" Fill="#FFFFFFFF" IsHitTestVisible="False"/>
       <Grid Margin="8,10,8,12">
         <Grid x:Name="TimeDragArea" HorizontalAlignment="Center" VerticalAlignment="Center"
               Margin="0,0,0,10" MinWidth="108" MinHeight="52"
               Background="#01000000" Cursor="SizeAll">
-          <TextBlock x:Name="TimeText" IsHitTestVisible="False"
-                     HorizontalAlignment="Center" VerticalAlignment="Center"
-                     FontSize="40" FontWeight="Bold" Foreground="#FFF5F5FA"/>
+          <StackPanel x:Name="TimeDisplay" Orientation="Horizontal" IsHitTestVisible="False"
+                      HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock x:Name="TimeMin" FontSize="40" FontWeight="Bold" Foreground="#FFF5F5FA"
+                       VerticalAlignment="Center" LineStackingStrategy="BlockLineHeight" LineHeight="40"/>
+            <TextBlock x:Name="TimeColon" Text=":" FontSize="40" FontWeight="Bold" Foreground="#FFF5F5FA"
+                       VerticalAlignment="Center" LineStackingStrategy="BlockLineHeight" LineHeight="40"
+                       Margin="0,-7,0,0"/>
+            <TextBlock x:Name="TimeSec" FontSize="40" FontWeight="Bold" Foreground="#FFF5F5FA"
+                       VerticalAlignment="Center" LineStackingStrategy="BlockLineHeight" LineHeight="40"/>
+          </StackPanel>
         </Grid>
         <Grid x:Name="BtnBar" Panel.ZIndex="10" Width="84" Height="38"
               HorizontalAlignment="Center" VerticalAlignment="Bottom"
@@ -395,8 +411,26 @@ while ($true) {
 $reader = New-Object System.Xml.XmlNodeReader $xaml
 $window = [Windows.Markup.XamlReader]::Load($reader)
 
-$timeText = $window.FindName('TimeText')
+$timeDisplay = $window.FindName('TimeDisplay')
+$timeMin = $window.FindName('TimeMin')
+$timeColon = $window.FindName('TimeColon')
+$timeSec = $window.FindName('TimeSec')
 $ring = $window.FindName('Ring')
+$progressBulge = $window.FindName('ProgressBulge')
+
+function Set-TimeDisplay {
+    param([int]$Sec)
+    $m = [math]::Floor($Sec / 60)
+    $s = $Sec % 60
+    $timeMin.Text = ('{0:00}' -f $m)
+    $timeSec.Text = ('{0:00}' -f $s)
+}
+
+function Set-TimeDisplayForeground([System.Windows.Media.Brush]$brush) {
+    foreach ($part in @($timeMin, $timeColon, $timeSec)) {
+        if ($null -ne $part) { $part.Foreground = $brush }
+    }
+}
 
 function Set-TimeTextShadow {
     param(
@@ -409,10 +443,10 @@ function Set-TimeTextShadow {
         $effect.BlurRadius = [Math]::Max(0, $blurRadius)
         $effect.Color = [System.Windows.Media.Colors]::Black
         $effect.Opacity = 0.9
-        $timeText.Effect = $effect
+        $timeDisplay.Effect = $effect
         return
     }
-    $timeText.Effect = $null
+    $timeDisplay.Effect = $null
 }
 
 Set-TimeTextShadow -enabled $script:timeShadowEnabled -blurRadius $script:timeShadowBlur
@@ -433,6 +467,95 @@ function Test-IsClickOnButton([object]$source) {
 $bc = [System.Windows.Media.BrushConverter]::new()
 $ringNormalThickness = 2.0
 
+# 圆环进度隆起（底贴在 Ring 上，顶朝圆心；随已用时间比例顺时针滑动）
+# 几何与 XAML 中 140×140 的 Ring 对齐，一般无需改动
+$script:ringProgressCx = 70.0   # 圆心 X（像素）
+$script:ringProgressCy = 70.0   # 圆心 Y（像素）
+$script:ringProgressR = 68.0     # 底边所在半径（与圆环描边中心线一致）
+$script:progressBulgeSweepDeg = 20.0   # 隆起底边在圆上的张角（度）；越大越「宽」
+$script:progressBulgePeakDepth = 6.0   # 峰顶向内偏移（像素）；越大越「鼓」
+$script:progressBulgeSigma = 0.40      # 高斯标准差（相对半弧宽 u∈[-1,1]）；越小越尖，越大越平
+$script:progressBulgeSegments = 22      # 轮廓折线分段数；越大曲线越光滑
+
+function Get-ProgressBulgeInward {
+    param(
+        [double]$u,
+        [double]$peakDepth,
+        [double]$sigma
+    )
+    if ($sigma -le 0.0001) { return 0.0 }
+    $uClamped = [Math]::Max(-1.0, [Math]::Min(1.0, $u))
+    $edge = 1.0 - ($uClamped * $uClamped)
+    if ($edge -le 0.0) { return 0.0 }
+    $gauss = [Math]::Exp(-0.5 * (($uClamped / $sigma) * ($uClamped / $sigma)))
+    return $peakDepth * $gauss * $edge
+}
+
+function Get-ProgressBulgePathData {
+    param([double]$angleDeg)
+    $half = $script:progressBulgeSweepDeg / 2.0
+    $startDeg = $angleDeg - $half
+    $endDeg = $angleDeg + $half
+    $cx = $script:ringProgressCx
+    $cy = $script:ringProgressCy
+    $r = $script:ringProgressR
+    $peakDepth = $script:progressBulgePeakDepth
+    $sigma = $script:progressBulgeSigma
+    $seg = $script:progressBulgeSegments
+
+    function Get-PointAt([double]$deg, [double]$radius) {
+        $rad = $deg * [Math]::PI / 180.0
+        return @{
+            X = $cx + ($radius * [Math]::Cos($rad))
+            Y = $cy + ($radius * [Math]::Sin($rad))
+        }
+    }
+
+    $pStart = Get-PointAt $startDeg $r
+    $pEnd = Get-PointAt $endDeg $r
+    $parts = New-Object System.Collections.Generic.List[string]
+    [void]$parts.Add(('M {0:F2},{1:F2}' -f $pStart.X, $pStart.Y))
+    [void]$parts.Add(('A {0:F2},{0:F2} 0 0 1 {1:F2},{2:F2}' -f $r, $pEnd.X, $pEnd.Y))
+
+    for ($i = $seg - 1; $i -ge 0; $i--) {
+        $t = $i / [double]$seg
+        $deg = $startDeg + (($endDeg - $startDeg) * $t)
+        $u = if ($half -le 0.0001) { 0.0 } else { ($deg - $angleDeg) / $half }
+        $inward = Get-ProgressBulgeInward -u $u -peakDepth $peakDepth -sigma $sigma
+        $pt = Get-PointAt $deg ($r - $inward)
+        [void]$parts.Add(('L {0:F2},{1:F2}' -f $pt.X, $pt.Y))
+    }
+    [void]$parts.Add('Z')
+    return ($parts -join ' ')
+}
+
+function Update-ProgressBulge {
+    param(
+        [int]$Remaining,
+        [int]$Total
+    )
+    if ($null -eq $progressBulge) { return }
+    if (-not $script:progressBulgeEnabled -or $Total -le 0) {
+        $progressBulge.Visibility = [System.Windows.Visibility]::Collapsed
+        return
+    }
+    $progressBulge.Visibility = [System.Windows.Visibility]::Visible
+    $elapsed = [Math]::Max(0, $Total - $Remaining)
+    $ratio = [Math]::Max(0.0, [Math]::Min(1.0, $elapsed / [double]$Total))
+    $angleDeg = -90.0 + ($ratio * 360.0)
+    $pathData = Get-ProgressBulgePathData -angleDeg $angleDeg
+    $progressBulge.Data = [System.Windows.Media.Geometry]::Parse($pathData)
+    if ($ring.Stroke -is [System.Windows.Media.SolidColorBrush]) {
+        $c = $ring.Stroke.Color
+        $bulgeColor = [System.Windows.Media.Color]::FromArgb(255, $c.R, $c.G, $c.B)
+        $bulgeBrush = New-Object System.Windows.Media.SolidColorBrush $bulgeColor
+        $progressBulge.Fill = $bulgeBrush
+    } else {
+        $progressBulge.Fill = $ring.Stroke
+    }
+}
+
+
 function New-WpfBrushFromDrawingColor([System.Drawing.Color]$color) {
     $mediaColor = [System.Windows.Media.Color]::FromArgb($color.A, $color.R, $color.G, $color.B)
     return New-Object System.Windows.Media.SolidColorBrush $mediaColor
@@ -451,7 +574,10 @@ function New-FollowBrushFromRing([System.Windows.Media.Brush]$ringBrush, [double
 function Set-RingAndButtons([System.Windows.Media.Brush]$ringBrush) {
     $ring.Stroke = $ringBrush
     Set-ButtonsForeground (New-FollowBrushFromRing $ringBrush 0.92)
-    $timeText.Foreground = New-FollowBrushFromRing $ringBrush 0.98
+    Set-TimeDisplayForeground (New-FollowBrushFromRing $ringBrush 0.98)
+    if ($script:initialTotal -gt 0) {
+        Update-ProgressBulge -Remaining $script:remaining -Total $script:initialTotal
+    }
 }
 
 function Set-ButtonsForeground([System.Windows.Media.Brush]$brush) {
@@ -518,21 +644,24 @@ function Set-FinishedUi([bool]$finished) {
     $script:finished = $finished
     if ($finished) {
         $script:remaining = 0
-        $timeText.Text = Format-Remaining 0
+        Set-TimeDisplay -Sec 0
         Clear-WarnVisual
         Set-RingAndButtons $brushRingNormal
         $ring.StrokeThickness = $ringNormalThickness
+        Update-ProgressBulge -Remaining 0 -Total $script:initialTotal
         $timer.Stop()
         Invoke-RemindBeep 880 300
         Invoke-RemindBeep 1100 500
         return
     }
     Clear-WarnVisual
-    $timeText.Text = Format-Remaining $script:remaining
+    Set-TimeDisplay -Sec $script:remaining
+    Update-ProgressBulge -Remaining $script:remaining -Total $script:initialTotal
 }
 
-$timeText.Text = Format-Remaining $total
+Set-TimeDisplay -Sec $total
 Set-RingAndButtons $brushRingNormal
+Update-ProgressBulge -Remaining $total -Total $total
 
 $area = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
 $window.Left = $area.Right - $window.Width - 24
@@ -552,8 +681,9 @@ $timer.Add_Tick({
         Set-FinishedUi $true
         return
     }
-    $timeText.Text = Format-Remaining $script:remaining
+    Set-TimeDisplay -Sec $script:remaining
     Update-WarnVisual $script:remaining
+    Update-ProgressBulge -Remaining $script:remaining -Total $script:initialTotal
 })
 
 $btnPause.Add_Click({
@@ -585,6 +715,7 @@ $btnClose.Add_Click({
 
 $window.Add_Loaded({
     Update-WarnVisual $script:remaining
+    Update-ProgressBulge -Remaining $script:remaining -Total $script:initialTotal
     $timer.Start()
 })
 function Start-WindowDrag {
