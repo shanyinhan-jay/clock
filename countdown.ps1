@@ -167,13 +167,17 @@ if ($total -le 0) {
       </Ellipse>
       <Ellipse x:Name="Ring" Stroke="#D9FFFFFF" StrokeThickness="2" Fill="Transparent"/>
       <Grid Margin="8,10,8,12">
-        <TextBlock x:Name="TimeText" IsHitTestVisible="False"
-                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                   Margin="0,0,0,10" FontSize="40" FontWeight="Bold" Foreground="#FFF5F5FA">
-          <TextBlock.Effect>
-            <DropShadowEffect ShadowDepth="0" BlurRadius="10" Color="Black" Opacity="0.9"/>
-          </TextBlock.Effect>
-        </TextBlock>
+        <Grid x:Name="TimeDragArea" HorizontalAlignment="Center" VerticalAlignment="Center"
+              Margin="0,0,0,10" MinWidth="108" MinHeight="52"
+              Background="#01000000" Cursor="SizeAll">
+          <TextBlock x:Name="TimeText" IsHitTestVisible="False"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     FontSize="40" FontWeight="Bold" Foreground="#FFF5F5FA">
+            <TextBlock.Effect>
+              <DropShadowEffect ShadowDepth="0" BlurRadius="10" Color="Black" Opacity="0.9"/>
+            </TextBlock.Effect>
+          </TextBlock>
+        </Grid>
         <Grid x:Name="BtnBar" Panel.ZIndex="10" Width="84" Height="38"
               HorizontalAlignment="Center" VerticalAlignment="Bottom"
               Background="#01000000">
@@ -358,12 +362,16 @@ $window.Add_Loaded({
     Update-WarnVisual $script:remaining
     $timer.Start()
 })
-$ring.Add_MouseLeftButtonDown({
+function Start-WindowDrag {
     param($sender, $e)
     if ($e.ClickCount -gt 1) { return }
     $e.Handled = $true
     $window.DragMove()
-})
+}
+
+$timeDragArea = $window.FindName('TimeDragArea')
+$timeDragArea.Add_MouseLeftButtonDown({ param($s, $e) Start-WindowDrag $s $e })
+$ring.Add_MouseLeftButtonDown({ param($s, $e) Start-WindowDrag $s $e })
 $window.Add_PreviewMouseDoubleClick({
     param($sender, $e)
     if (Test-IsClickOnButton $e.OriginalSource) {
