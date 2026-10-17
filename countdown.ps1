@@ -30,8 +30,21 @@ function Format-Remaining([int]$sec) {
     return ('{0:00}:{1:00}' -f $m, $s)
 }
 
+function Get-CountdownAppRoot {
+    if (-not [string]::IsNullOrEmpty($PSScriptRoot)) {
+        return $PSScriptRoot
+    }
+    try {
+        $exePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+        if (-not [string]::IsNullOrEmpty($exePath)) {
+            return [System.IO.Path]::GetDirectoryName($exePath)
+        }
+    } catch { }
+    return (Get-Location).Path
+}
+
 function Get-CountdownSettingsPath {
-    Join-Path $PSScriptRoot 'countdown.settings.json'
+    Join-Path (Get-CountdownAppRoot) 'countdown.settings.json'
 }
 
 function Get-CountdownSettings {

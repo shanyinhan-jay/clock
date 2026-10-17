@@ -1,9 +1,9 @@
 ﻿{
     "WarnSeconds":  5,
-    "BorderColorArgb":  -128,
+    "BorderColorArgb":  -16777088,
     "TimeShadowEnabled":  true,
     "Minutes":  0,
     "SoundEnabled":  true,
-    "TimeShadowBlur":  2,
+    "TimeShadowBlur":  1,
     "Seconds":  10
 }
